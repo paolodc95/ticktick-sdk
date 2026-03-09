@@ -152,7 +152,10 @@ class Task(TickTickModel):
     )
     @classmethod
     def parse_datetime_field(cls, v: Any) -> datetime | None:
-        return cls.parse_datetime(v)
+        # Try to get user timezone from environment or keep UTC
+        import os
+        user_tz = os.environ.get("TICKTICK_USER_TIMEZONE")
+        return cls.parse_datetime(v, user_tz=user_tz)
 
     @field_validator("reminders", mode="before")
     @classmethod
