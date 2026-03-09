@@ -91,15 +91,18 @@ class TickTickModel(BaseModel):
         """Format a datetime for API submission."""
         if value is None:
             return None
-
+    
         # Ensure timezone aware
         if value.tzinfo is None:
             value = value.replace(tzinfo=timezone.utc)
-
+        
+        # 🔧 FIX: Converti sempre in UTC prima di formattare
+        value_utc = value.astimezone(timezone.utc)
+    
         if for_api == "v1":
-            return value.strftime(DATETIME_FORMAT_V1)
+            return value_utc.strftime(DATETIME_FORMAT_V1)
         else:
-            return value.strftime(DATETIME_FORMAT_V2)
+            return value_utc.strftime(DATETIME_FORMAT_V2)
 
     def to_v1_dict(self) -> dict[str, Any]:
         """Convert to V1 API format dictionary."""
