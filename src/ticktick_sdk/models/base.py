@@ -39,38 +39,52 @@ class TickTickModel(BaseModel):
     _source_api: ClassVar[str | None] = None
 
     @classmethod
-    def parse_datetime(cls, value: str | datetime | None) -> datetime | None:
-        """Parse a datetime string from either V1 or V2 format."""
+    def parse_datetime(cls, value: str | datetime | None, user_tz: str | None = None) -> datetime | None:
+        """Parse a datetime string from either V1 or V2 format.
+        
+        Args:
+            value: The datetime string or object to parse
+            user_tz: Optional timezone name (e.g., 'Europe/Rome') to convert the result to
+        """
         if value is None:
             return None
         if isinstance(value, datetime):
-            return value
+            dt = value
+        else:
+            # Try V2 format first (more common)
+            formats = [
+                "%Y-%m-%dT%H:%M:%S.%f%z",
+                "%Y-%m-%dT%H:%M:%S.000+0000",
+                "%Y-%m-%dT%H:%M:%S%z",
+                "%Y-%m-%dT%H:%M:%S+0000",
+                "%Y-%m-%dT%H:%M:%SZ",
+            ]
+    
+            dt = None
+            for fmt in formats:
+                try:
+                    # Handle the +0000 format
+                    value_str = value
+                    if "+0000" in value and "%z" in fmt:
+                        value_str = value.replace("+0000", "+00:00")
+                    dt = datetime.strptime(value_str, fmt)
+                    break
+                except ValueError:
+                    continue
+    
+            # Try ISO format as fallback
+            if dt is None:
+                try:
+                    dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+                except ValueError:
+                    return None
+    
+        # Convert to user timezone if provided
+        if user_tz and dt.tzinfo:
+            from zoneinfo import ZoneInfo
+            dt = dt.astimezone(ZoneInfo(user_tz))
 
-        # Try V2 format first (more common)
-        formats = [
-            "%Y-%m-%dT%H:%M:%S.%f%z",
-            "%Y-%m-%dT%H:%M:%S.000+0000",
-            "%Y-%m-%dT%H:%M:%S%z",
-            "%Y-%m-%dT%H:%M:%S+0000",
-            "%Y-%m-%dT%H:%M:%SZ",
-        ]
-
-        for fmt in formats:
-            try:
-                # Handle the +0000 format
-                if "+0000" in value and "%z" in fmt:
-                    value = value.replace("+0000", "+00:00")
-                return datetime.strptime(value, fmt)
-            except ValueError:
-                continue
-
-        # Try ISO format as fallback
-        try:
-            return datetime.fromisoformat(value.replace("Z", "+00:00"))
-        except ValueError:
-            pass
-
-        return None
+    return dt
 
     @classmethod
     def format_datetime(cls, value: datetime | None, for_api: str = "v2") -> str | None:
