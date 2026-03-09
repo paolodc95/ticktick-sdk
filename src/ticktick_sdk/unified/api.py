@@ -1099,16 +1099,26 @@ class UnifiedTickTickAPI:
                     priority_map = {"none": 0, "low": 1, "medium": 3, "high": 5}
                     priority = priority_map.get(priority.lower(), int(priority))
                 v2_update["priority"] = priority
+            # Handle date updates with automatic sync
+            due_date_updated = "due_date" in update and update["due_date"] is not None
+            start_date_explicitly_provided = "start_date" in update
+            
             if "start_date" in update and update["start_date"] is not None:
                 start_date = update["start_date"]
                 if isinstance(start_date, datetime):
                     start_date = Task.format_datetime(start_date, "v2")
                 v2_update["startDate"] = start_date
-            if "due_date" in update and update["due_date"] is not None:
+            
+            if due_date_updated:
                 due_date = update["due_date"]
                 if isinstance(due_date, datetime):
                     due_date = Task.format_datetime(due_date, "v2")
                 v2_update["dueDate"] = due_date
+                
+                # Auto-sync: If due_date is updated but start_date not explicitly provided,
+                # set start_date = due_date to keep them in sync (TickTick behavior)
+                if not start_date_explicitly_provided:
+                    v2_update["startDate"] = due_date
             if "time_zone" in update and update["time_zone"] is not None:
                 v2_update["timeZone"] = update["time_zone"]
             if "all_day" in update and update["all_day"] is not None:
