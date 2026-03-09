@@ -84,7 +84,7 @@ class TickTickModel(BaseModel):
             from zoneinfo import ZoneInfo
             dt = dt.astimezone(ZoneInfo(user_tz))
 
-    return dt
+        return dt
 
     @classmethod
     def format_datetime(cls, value: datetime | None, for_api: str = "v2") -> str | None:
